@@ -1,12 +1,13 @@
 #!/bin/bash
 
-if [[ "$1"  == "--help" ]]
+if [[ $# != 1 ]]
 then
-  echo "usage $0 [remote machine ip, dns or ssh config name (defaults to catsndogs)]"
+  echo "usage $0 <remote machine>
+    where <remote machine> can be ip, dns or ssh config name"
   exit 1
 fi
 
-remote_machine=${1:-catsndogs}
+remote_machine=$1
 
 ssh ${remote_machine} /bin/bash << ENDOFINSTALL
   sudo apt-get update
