@@ -1,5 +1,14 @@
 #!/bin/bash
-ssh catsndogs.westeurope.cloudapp.azure.com /bin/bash << ENDOFINSTALL
+
+if [[ "$1"  == "--help" ]]
+then
+  echo "usage $0 [remote machine ip, dns or ssh config name (defaults to catsndogs)]"
+  exit 1
+fi
+
+remote_machine=${1:-catsndogs}
+
+ssh ${remote_machine} /bin/bash << ENDOFINSTALL
   sudo apt-get update
   sudo apt-get install -y ca-certificates     curl     gnupg     lsb-release
   sudo mkdir -p /etc/apt/keyrings
@@ -8,6 +17,6 @@ ssh catsndogs.westeurope.cloudapp.azure.com /bin/bash << ENDOFINSTALL
       $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
   sudo apt-get update
   sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-  sudo addgroup rob docker
+  sudo addgroup $(whoami)  docker
 ENDOFINSTALL
 
