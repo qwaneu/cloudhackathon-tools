@@ -14,4 +14,5 @@ sudo mkdir /home/catsndogs
 sudo chmod 777 /home/catsndogs
 cd /home/catsndogs
 git clone https://github.com/dockersamples/example-voting-app
+chmod -R a+w example-voting-app
 ENDOFSCRIPT

@@ -33,4 +33,8 @@ az vm create \
   --location westeurope \
   --image "Canonical:0001-com-ubuntu-server-jammy:22_04-lts-gen2:22.04.202211011" \
   --data-disk-delete-option Delete \
+  --size Standard_B1s \
   --public-ip-address-dns-name ${name}
+
+az vm open-port --resource-group ${resource_group} --name ${name} --port 5000-5001
+
