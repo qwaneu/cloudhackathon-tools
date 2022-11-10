@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="1" time="0.071" timestamp="2022-11-10T13:50:47.781291" hostname="blixa"><testcase classname="tests.test_scoreboard.Test_scoreboard" name="test_first" time="0.001"><failure message="AssertionError: &#10;Expected: &lt;1&gt;&#10;     but: was &lt;0&gt;">self = &lt;test_scoreboard.Test_scoreboard object at 0x7f13f99fca90&gt;
+
+    def test_first(self):
+&gt;       assert_that(0, equal_to(1))
+E       AssertionError: 
+E       Expected: &lt;1&gt;
+E            but: was &lt;0&gt;
+
+tests/test_scoreboard.py:7: AssertionError</failure></testcase></testsuite></testsuites>
