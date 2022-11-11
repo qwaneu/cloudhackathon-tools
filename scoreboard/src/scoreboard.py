@@ -3,18 +3,29 @@ from typing import Any, List
 import sqlite3
 import os
 
+
+
 class Board:
-    def __init__(self, team: str, sources:List[Any]=[]):
-        self._team = team
+    def __init__(self, teams:List[str], sources:List[Any]=[]):
+        self._teams = teams
         self._sources = sources
         
-    def score(self):
-        return sum([source.score(self._team) for source in self._sources])
+    def score(self, team):
+        return sum([source.score(team) for source in self._sources])
 
     def show(self):
-        print("score for {team}; total of {score}".format(team=self._team, score=self.score()))
+        print("Scoreboard\n")
+        
+        print(self._teams_string())
+        print("")
         for source in self._sources:
-            source.show(self._team)
+            print(self._source_string(source))
+
+    def _teams_string(self):
+        return "".join([f"{team:<22}{self.score(team):<5}" for team in self._teams])
+
+    def _source_string(self, source):
+        return "".join([f"{source.label(team):<22}{source.score(team):<5}" for team in self._teams])
 
 class ContainerSource:
     def __init__(self, max_containers, container_services):
@@ -24,8 +35,8 @@ class ContainerSource:
     def score(self, team):
         return (self._max_containers - self._container_services.count(team)) * 2
             
-    def show(self, team):
-        print("Containers still running: {containers}; score: {score}".format(containers=self._container_services.count(team), score=self.score(team)))
+    def label(self, team):
+        return f"{'Containers:':<15}{self._container_services.count(team):>3} |"
 
 
 class EndToEndTestSource:
@@ -35,8 +46,8 @@ class EndToEndTestSource:
     def score(self, team):
         return -self._test_failures.count(team)
 
-    def show(self, team):
-        print("End to end failures: {failures}; score: {score}".format(failures=self._test_failures.count(team), score=self.score(team)))
+    def label(self, team):
+        return f"{'Test failures:':<15}{self._test_failures.count(team):>3} |"
 
 
 class DiversitySource:
@@ -46,8 +57,8 @@ class DiversitySource:
     def score(self, team):
         return self._service_diversity.size(team) * 2
 
-    def show(self, team):
-        print("Diversity of services: {diversity}; score: {score}".format(diversity=self._service_diversity.size(team), score=self.score(team)))
+    def label(self, team):
+        return f"{'Diversity:':<15}{self._service_diversity.size(team):>3} |"
 
 class ServiceDiversity:
     def __init__(self, diversity):
@@ -55,6 +66,9 @@ class ServiceDiversity:
         
     def increase(self, team):
         self._diversity.save_size(team, self._diversity.size(team) + 1);
+
+    def decrease(self, team):
+        self._diversity.save_size(team, self._diversity.size(team) - 1);
 
     def size(self, team):
         return self._diversity.size(team)
@@ -66,6 +80,9 @@ class Failures:
         
     def increase(self, team):
         self._test_failures.save(team, self._test_failures.count(team) + 1);
+
+    def decrease(self, team):
+        self._test_failures.save(team, self._test_failures.count(team) - 1);
 
     def count(self, team):
         return self._test_failures.count(team)
@@ -171,18 +188,24 @@ class SQLDatabase:
         return self._db.commit()
 
 import click
+import subprocess, time
+
 @click.group()
 def cli():
     pass
 
 @cli.command()
-def show():
+@click.argument('teams', nargs=-1)
+def show(teams):
     db = SQLDatabase.open("scores.db")
-    Board("waes-lion",[
+    sources = [
         ContainerSource(5, SQLiteBasedContainerServices.create(db)),
         EndToEndTestSource(Failures(SQLiteBasedTestFailures.create(db))),
         DiversitySource(ServiceDiversity(SQLiteBasedServiceDiversity.create(db)))
-    ]).show()
+    ]
+
+    boards = Board(teams,sources)
+    boards.show()
 
 @cli.command()
 @click.argument('team')
@@ -192,7 +215,6 @@ def containers(team, containers_still_alive):
     cs = SQLiteBasedContainerServices.create(db)
     cs.save_count(team,containers_still_alive)        
 
-import subprocess, time
 @cli.command()
 @click.argument('teams', nargs=-1)
 def monitor_containers(teams):
@@ -201,7 +223,7 @@ def monitor_containers(teams):
     while True:
         subprocess.call('clear')
         for team in teams:
-            containers = subprocess.check_output(f"ssh {team} docker ps --format '{{{{.Names}}}}'", shell=True).decode('utf-8').strip().split("\n")
+            containers = remove_empty_values(subprocess.check_output(f"ssh {team} docker ps --format '{{{{.Names}}}}'", shell=True).decode('utf-8').strip().split("\n"))
             print(f"{len(containers)} containers running for {team}:")
             for container in containers:
                 print(f"\t{container}")
@@ -209,7 +231,39 @@ def monitor_containers(teams):
         time.sleep(5) 
         
 
+def remove_empty_values(list):
+    return [ e for e in list if len(e) != 0]
 
+
+@cli.command()
+@click.argument('team')
+def increase_diversity(team):
+    db = SQLDatabase.open("scores.db")
+    sdiv = ServiceDiversity(SQLiteBasedServiceDiversity.create(db))
+    sdiv.increase(team)
+    
+
+@cli.command()
+@click.argument('team')
+def decrease_diversity(team):
+    db = SQLDatabase.open("scores.db")
+    sdiv = ServiceDiversity(SQLiteBasedServiceDiversity.create(db))
+    sdiv.decrease(team)
+
+@cli.command()
+@click.argument('team')
+def add_failure(team):
+    db = SQLDatabase.open("scores.db")
+    failures = Failures(SQLiteBasedTestFailures.create(db))
+    failures.increase(team)
+    
+
+@cli.command()
+@click.argument('team')
+def remove_failure(team):
+    db = SQLDatabase.open("scores.db")
+    failures = Failures(SQLiteBasedTestFailures.create(db))
+    failures.decrease(team)
 
 
 if __name__ == "__main__":
