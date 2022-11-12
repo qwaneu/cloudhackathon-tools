@@ -2,3 +2,5 @@ pyhamcrest==2.0.2
 pytest==6.1.1
 pytest_watch==4.2.0
 click==8.1.3
+python-socketio[client]==4.6.1
+pyyaml==6.0

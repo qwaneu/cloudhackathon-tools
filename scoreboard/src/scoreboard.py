@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from socket import socket
 from typing import Any, List
 import sqlite3
 import os
@@ -253,6 +254,8 @@ def decrease_diversity(team):
 @cli.command()
 @click.argument('team')
 def add_failure(team):
+    _add_failure(team)
+def _add_failure(team):
     db = SQLDatabase.open("scores.db")
     failures = Failures(SQLiteBasedTestFailures.create(db))
     failures.increase(team)
@@ -264,6 +267,89 @@ def remove_failure(team):
     db = SQLDatabase.open("scores.db")
     failures = Failures(SQLiteBasedTestFailures.create(db))
     failures.decrease(team)
+
+import socketio
+from threading import Thread
+import requests
+import json
+class ResultPoller:
+    def __init__(self, team, client):
+        self._client = client
+        self._team = team
+        self._last_received = dict(a=0,b=0)
+        self._last_probed = dict(a=0,b=0)
+
+    def run(self):
+        @self._client.on('scores')
+        def on_scoes(data):
+            self._last_received = json.loads(data)
+
+        def connect_to_server():
+            self._client.connect(self._url, transports=['polling'])
+
+        self._thread = Thread(target=connect_to_server)
+        self._thread.start()
+        return self
+
+    def capture_current(self, vote):
+        self._last_probed = self._last_received.clone()
+
+    def wait_for_vote(self, vote):
+        interval = 0.10
+        total_time = 0
+
+        while total_time < 3:
+            if self._last_received[vote] > self._last_probed[vote]:
+                print(f"vote '{vote}' found")
+                self._last_probed = self._last_received.copy()
+                return True
+            print(".", end='', flush=True)
+            time.sleep(interval)
+            total_time+=interval
+
+        print('F')
+        print(f"vote '{vote}' not found")
+        return False
+
+    def stop(self):
+        self._client.disconnect()
+
+    def wait(self):
+        self._thread.join()
+
+    @property
+    def _url(self):
+        return f"http://{self._team}.westeurope.cloudapp.azure.com:5001"
+
+
+@cli.command()
+@click.argument('team')
+def smoke_test(team):
+    result_poller = ResultPoller(team, socketio.Client()).run()
+    time.sleep(1)
+    print(result_poller._last_probed, result_poller._last_received['b']) 
+
+    if not vote(team, 'a') or not result_poller.wait_for_vote("a"):
+        _add_failure(team)
+        result_poller.stop()
+        result_poller.wait()
+        return
+    if not vote(team, 'b') or not result_poller.wait_for_vote("b"):
+        _add_failure(team)
+    result_poller.stop()
+    result_poller.wait()
+    
+
+def vote(team, v):
+    try:
+        requests.post(f"http://{team}.westeurope.cloudapp.azure.com:5000", cookies={"voter_id": "42"}, data={"vote":v})
+        return True
+    except ConnectionError as e:
+        print(f"Cannot vote {e}")
+        return False
+    except Exception as e:
+        print(f"Cannot vote {e}")
+        return False
 
 
 if __name__ == "__main__":
