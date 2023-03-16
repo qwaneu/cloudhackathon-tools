@@ -1,0 +1,10 @@
+---
+waes-lion:
+  vote-url: "http://waes-lion.westeurope.cloudapp.azure.com:5000"
+  result-url: "http://waes-lion.westeurope.cloudapp.azure.com:5001"
+waes-tiger:
+  vote-url: "http://waes-tiger.westeurope.cloudapp.azure.com:5000"
+  result-url: "http://waes-tiger.westeurope.cloudapp.azure.com:5001"
+waes-puma:
+  vote-url: "http://waes-puma.westeurope.cloudapp.azure.com:5000"
+  result-url: "http://waes-puma.westeurope.cloudapp.azure.com:5001"
