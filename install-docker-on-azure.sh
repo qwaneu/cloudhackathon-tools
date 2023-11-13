@@ -1,13 +1,18 @@
 #!/bin/bash
 
-if [[ $# != 1 ]]
-then
-  echo "usage $0 <remote machine>
-    where <remote machine> can be ip, dns or ssh config name"
-  exit 1
-fi
-
 remote_machine=$1
+password=$2
+
+usage() {
+    echo $1
+    echo "usage: $0 <remote_machine> <password>"
+    echo "       where remote machine will also be used as pair user name"
+    exit 1
+}
+
+[[ "$remote_machine" == "" ]] && usage "no remote_machine given"
+[[ "$password" == "" ]] && usage "no password given"
+
 
 ssh ${remote_machine} /bin/bash << ENDOFINSTALL
   sudo apt-get update
@@ -19,5 +24,7 @@ ssh ${remote_machine} /bin/bash << ENDOFINSTALL
   sudo apt-get update
   sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
   sudo addgroup $(whoami)  docker
+  sudo useradd ${remote_machine} -m -p ${password}
+  sudo addgroup ${remote_machine} docker
 ENDOFINSTALL
 
