@@ -1,17 +1,15 @@
 #!/bin/bash
 
 remote_machine=$1
-password=$2
 
 usage() {
     echo $1
-    echo "usage: $0 <remote_machine> <password>"
+    echo "usage: $0 <remote_machine>"
     echo "       where remote machine will also be used as pair user name"
     exit 1
 }
 
-[[ "$remote_machine" == "" ]] && usage "no remote_machine given"
-[[ "$password" == "" ]] && usage "no password given"
+[[ "${remote_machine}" == "" ]] && usage "no remote_machine given"
 
 
 ssh ${remote_machine} /bin/bash << ENDOFINSTALL
@@ -23,8 +21,9 @@ ssh ${remote_machine} /bin/bash << ENDOFINSTALL
       $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
   sudo apt-get update
   sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-  sudo addgroup $(whoami)  docker
-  sudo useradd ${remote_machine} -m -p ${password}
+  sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/50-cloud-init.conf
+  sudo service sshd restart
+  sudo addgroup $(whoami) docker
   sudo addgroup ${remote_machine} docker
 ENDOFINSTALL
 
