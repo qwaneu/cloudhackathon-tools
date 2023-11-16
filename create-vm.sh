@@ -17,6 +17,8 @@ name:           '$name'
 password:       '$password' 
 resource group: '$resource_group'
 domain name:    '${name}.westeurope.cloudapp.azure.com'
+
+removing ssh key for '$name' from known-hosts
 "
 
 while [[ -z $REPLY ]]
@@ -39,3 +41,4 @@ az vm create \
 az vm user update -n ${name} -g $resource_group -u ${name} -p ${password}
 az vm open-port --resource-group ${resource_group} --name ${name} --port 5000-5001
 
+ssh-keygen -f ~/.ssh/known_hosts -R "${name}.westeurope.cloudapp.azure.com"
